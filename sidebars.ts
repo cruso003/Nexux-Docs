@@ -38,6 +38,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Examples',
       items: [
+        'examples/adapter-examples',
         'examples/language-learning',
       ],
     },

@@ -4,13 +4,205 @@ Business Logic Adapters are the heart of the Universal AI Platform's customizati
 
 ## What Are Business Logic Adapters?
 
+Business Logic Adapters are **dynamic context providers** - they don't dictate your application logic, but intelligently gather and provide the AI with relevant context based on user queries. Your application maintains full control over the user experience and workflow.
+
 Business Logic Adapters are pluggable components that:
 
-- **Process user input** before it reaches the AI agent
-- **Modify agent responses** based on domain-specific rules
-- **Implement custom workflows** for specific industries or use cases
-- **Add validation and safety checks** for critical applications
-- **Integrate with external systems** and APIs
+- **Dynamically fetch relevant information** based on user queries
+- **Provide domain-specific context** to guide AI responses
+- **Add safety and validation checks** for critical applications  
+- **Format and structure data** for consistent AI understanding
+- **Prevent hallucination** through targeted guidelines
+- **Enable safe response handling** when validation fails
+
+**Key Principle**: Adapters provide context, your application provides logic.
+
+## Platform vs. Developer Responsibilities
+
+### What the Platform Provides
+- **Safety Framework**: Built-in anti-hallucination protection and response validation
+- **API Safety**: All underlying AI APIs include harmful content detection
+- **Adapter Architecture**: Tools for dynamic context fetching and processing
+- **Security Tools**: Input sanitization and output filtering capabilities
+
+### What Developers Control
+- **Context Content**: All domain-specific information and business data
+- **Data Sources**: How and where context information is fetched
+- **Implementation**: Whether to use static context or dynamic information retrieval
+- **Business Logic**: Application workflow and user experience
+
+### Context Flexibility
+
+Developers have complete freedom in how they provide context:
+
+#### Option 1: Static Context (Simple)
+```python
+class SimpleAdapter(BusinessLogicAdapter):
+    def process_user_input(self, user_input, session_context):
+        # Hardcoded business context
+        session_context['company_info'] = {
+            'name': 'Acme Corp',
+            'policies': ['30-day return', 'free shipping over $50'],
+            'support_hours': '9 AM - 5 PM EST'
+        }
+        return user_input, session_context
+```
+
+#### Option 2: Dynamic Context (Advanced)
+```python
+class DynamicAdapter(BusinessLogicAdapter):
+    def process_user_input(self, user_input, session_context):
+        # Fetch real-time information from your systems
+        customer_id = session_context.get('customer_id')
+        if customer_id:
+            # Your database, your rules
+            customer_data = self.crm_api.get_customer(customer_id)
+            order_history = self.orders_api.get_recent_orders(customer_id)
+            
+            session_context['customer_context'] = {
+                'tier': customer_data['tier'],
+                'recent_orders': order_history,
+                'preferences': customer_data['preferences']
+            }
+        
+        return user_input, session_context
+```
+
+**Important**: The platform has no visibility into your context content - you control all business data and information flow.
+
+## Safety and Monitoring Boundaries
+
+### Platform-Level Safety (Automatic)
+- **Harmful Content Detection**: All AI APIs include built-in protection against harmful, offensive, or dangerous content
+- **Model Safety**: Underlying language models have training-level safety measures
+- **API Rate Limiting**: Prevents abuse and ensures fair usage
+
+### Developer Responsibility
+- **Context Content**: All business-specific information you provide in adapters
+- **Data Privacy**: Ensuring your data handling complies with regulations (GDPR, HIPAA, etc.)
+- **Business Logic**: How your application responds to AI outputs
+- **User Safety**: Implementing appropriate safeguards for your specific use case
+
+### No Platform Monitoring of Your Context
+The Universal AI Platform cannot and does not monitor:
+- What business data you include in your adapter context
+- How you fetch or structure your information
+- The content of your databases or APIs
+- Your internal business processes or policies
+
+This ensures:
+- **Privacy**: Your business data remains completely private
+- **Flexibility**: You can implement any business logic without platform restrictions
+- **Compliance**: You maintain full control over data handling and regulatory compliance
+
+## Dynamic Context Fetching
+
+Adapters can intelligently fetch relevant information based on user queries, making them powerful context enrichment engines:
+
+### Query-Based Information Retrieval
+
+```python
+class CustomerServiceAdapter(BusinessLogicAdapter):
+    def process_user_input(self, user_input, session_context):
+        """Dynamically fetch context based on user query"""
+        
+        # Detect what information the user is asking about
+        if self._is_product_question(user_input):
+            # Fetch product details from your database/API
+            product_info = self._fetch_product_context(user_input)
+            session_context['product_context'] = product_info
+            
+        elif self._is_order_question(user_input):
+            # Get order information for this customer
+            order_data = self._fetch_order_context(user_input, session_context)
+            session_context['order_context'] = order_data
+            
+        elif self._is_policy_question(user_input):
+            # Retrieve relevant policies and procedures
+            policies = self._fetch_policy_context(user_input)
+            session_context['policy_context'] = policies
+        
+        return user_input, session_context
+    
+    def _fetch_product_context(self, query):
+        """Search and retrieve relevant product information"""
+        # Extract product names/IDs from query
+        products = self._extract_product_references(query)
+        
+        # Fetch from your product database
+        product_data = []
+        for product in products:
+            data = self.product_api.get_product_details(product)
+            product_data.append({
+                'name': data['name'],
+                'features': data['features'],
+                'compatibility': data['compatibility'],
+                'common_issues': data['support_faq']
+            })
+        
+        return product_data
+```
+
+### Real-Time Data Integration
+
+```python
+class EmergencyServicesAdapter(BusinessLogicAdapter):
+    def process_user_input(self, user_input, session_context):
+        """Fetch real-time emergency response data"""
+        
+        # Extract location from user input
+        location = self._extract_location(user_input)
+        if location:
+            # Get real-time responder availability
+            responder_status = self._fetch_responder_availability(location)
+            session_context['responder_context'] = responder_status
+            
+            # Check for active incidents in area
+            area_incidents = self._fetch_area_incidents(location)
+            session_context['area_context'] = area_incidents
+            
+            # Get hospital/facility availability
+            facility_status = self._fetch_facility_capacity(location)
+            session_context['facility_context'] = facility_status
+        
+        return user_input, session_context
+    
+    def _fetch_responder_availability(self, location):
+        """Get real-time responder status"""
+        return self.dispatch_api.get_available_units(
+            location=location,
+            radius_miles=10
+        )
+```
+
+### Contextual Knowledge Enrichment
+
+```python
+class HealthcareAdapter(BusinessLogicAdapter):
+    def process_user_input(self, user_input, session_context):
+        """Enrich context with relevant medical information"""
+        
+        # Extract symptoms and conditions mentioned
+        medical_entities = self._extract_medical_entities(user_input)
+        
+        if medical_entities['symptoms']:
+            # Fetch relevant medical context (not advice!)
+            symptom_context = self._fetch_symptom_information(medical_entities['symptoms'])
+            session_context['symptom_context'] = symptom_context
+            
+        if medical_entities['medications']:
+            # Get medication interaction warnings
+            interaction_data = self._fetch_interaction_data(medical_entities['medications'])
+            session_context['interaction_warnings'] = interaction_data
+            
+        # Check if patient has previous visits/records
+        patient_id = session_context.get('patient_id')
+        if patient_id:
+            visit_history = self._fetch_recent_visits(patient_id)
+            session_context['visit_context'] = visit_history
+        
+        return user_input, session_context
+```
 
 ## Architecture
 
@@ -22,15 +214,95 @@ Business Logic Adapters are pluggable components that:
                               │                         │
                               ▼                         ▼
                        ┌──────────────────┐    ┌─────────────────┐
-                       │ Custom Processing│    │  Agent Response │
-                       │ & Validation     │    │                 │
+                       │ Context Provider │    │  AI Response    │
+                       │ Safety Checks    │    │  with Context   │
                        └──────────────────┘    └─────────────────┘
                               │
                               ▼
                        ┌──────────────────┐
-                       │ External Systems │
-                       │ APIs, Databases  │
+                       │ Anti-Hallucination│
+                       │ Validation       │
                        └──────────────────┘
+```
+
+## Use Cases & Examples
+
+The beauty of business logic adapters is their flexibility. Here are real-world scenarios:
+
+### Emergency Services - Pre-Response Information Gathering
+- **Context**: Format emergency data for dispatcher systems
+- **Your App Logic**: Integration with CAD systems, responder dispatch
+- **AI Role**: Gather structured information, provide caller support
+
+### Language Learning - Conversation Partner  
+- **Context**: Adjust language complexity, cultural nuances
+- **Your App Logic**: Progress tracking, lesson planning, user management
+- **AI Role**: Conversational practice, gentle correction
+
+### Customer Service - Support Assistant
+- **Context**: Product knowledge, company policies, escalation rules
+- **Your App Logic**: Ticket management, CRM integration, analytics
+- **AI Role**: First-line support, information gathering
+
+### Healthcare - Information Assistant
+- **Context**: Medical terminology, privacy requirements, escalation triggers
+- **Your App Logic**: EHR integration, appointment scheduling, provider routing
+- **AI Role**: Symptom gathering, appointment assistance (not diagnosis)
+```
+
+## Anti-Hallucination Protection
+
+All business logic adapters include built-in protection against AI hallucination - crucial for production applications where accuracy matters.
+
+### How It Works
+
+```python
+# Automatic detection of problematic responses
+hallucination_indicators = [
+    'according to my knowledge',  # False confidence
+    'i believe', 'probably',      # Uncertainty disguised as fact
+    'i can help with anything',   # Overpromising capabilities
+    'let me check that for you'   # False action claims
+]
+
+# Note: Customize these indicators based on your business domain.
+# For example, a payment processor might flag mentions of unsupported payment methods,
+# while a healthcare service might flag inappropriate medical advice claims.
+
+# Response validation
+def validate_response(response):
+    risk_level = assess_hallucination_risk(response)
+    if risk_level == 'high':
+        return safe_fallback_response()
+    return response
+```
+
+### Safety Features
+
+- **Confidence Detection**: Flags responses that sound certain about uncertain information
+- **Domain Boundaries**: Prevents AI from claiming capabilities outside its scope  
+- **Fallback Responses**: Provides safe alternatives when validation fails
+- **Context Adherence**: Ensures responses stay within provided context
+
+### Best Practices
+
+1. **Provide Clear Context**: The more specific your context, the less likely the AI will hallucinate
+2. **Set Domain Boundaries**: Explicitly state what the AI should and shouldn't do
+3. **Use Validation**: Always validate responses in critical applications
+4. **Monitor Responses**: Review AI outputs regularly, especially in early deployment
+
+```python
+# Example: Safe emergency services context
+emergency_context = """
+Role: Information gathering assistant for emergency dispatch
+Boundaries: 
+- Do NOT provide medical advice
+- Do NOT diagnose conditions  
+- Do NOT recommend treatments
+- DO gather location, situation details
+- DO provide reassurance and support
+- DO escalate to human dispatcher when needed
+"""
 ```
 
 ## Built-in Adapters
